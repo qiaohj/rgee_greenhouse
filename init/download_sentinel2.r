@@ -1,10 +1,32 @@
 library(rgee)
 library(sf)
 library(ggplot2)
-setwd("/media/huijieqiao/Butterfly/rgee_greenhouse/rgee_greenhouse")
-# ee_reattach() # reattach ee as a reserved word
 
-ee_Initialize(drive = TRUE)
+setwd("/media/huijieqiao/Butterfly/rgee_greenhouse/rgee_greenhouse")
+#setwd("~/media/huijieqiao/Butterfly/rgee_greenhouse/rgee_greenhouse")
+# ee_reattach() # reattach ee as a reserved word
+args = commandArgs(trailingOnly=TRUE)
+
+user_index<-as.numeric(args[1])
+if (is.na(user_index)){
+  user_index<-1
+}
+if (user_index==1){
+  user_str<-"qiaohj.others@gmail.com"
+  ee_Initialize(drive = TRUE)
+}
+if (user_index==2){
+  user_str<-"aws.20210901@gmail.com"
+  ee_Initialize(user=user_str, drive = TRUE)
+}
+if (user_index==3){
+  user_str<-"rgee20221020.1@gmail.com"
+  ee_Initialize(user=user_str, drive = TRUE)
+}
+if (user_index==4){
+  user_str<-"huijieqiao@gmail.com"
+  ee_Initialize(user=user_str, drive = TRUE)
+}
 
 maskS2clouds <- function(image) {
   qa <- image$select("QA60")
@@ -24,10 +46,7 @@ maskS2clouds <- function(image) {
     copyProperties(image, list("system:time_start"))
 }
 
-# Input imagery is a cloud-free Landsat 8 composite.
-image<-ee$ImageCollection("COPERNICUS/S2")$
-  filterDate(date_froms[month], date_tos[month])$
-  filter(ee$Filter$lt("CLOUDY_PIXEL_PERCENTAGE", 20))
+
 grid_china<-st_read("../Shape/Towns/grid_china.shp")
 st_crs(grid_china)<-st_crs("+proj=utm +zone=54 +south +datum=WGS84 +units=m +no_defs")
 #https://gisgeography.com/sentinel-2-bands-combinations/
@@ -57,7 +76,9 @@ for (month in c(1:12)){
     plot(grid_china$geometry)
     plot(grid_china[ID,]$geometry, col="red", add=T)
   }
-  for (ID in unique(grid_china$ID)){
+  IDs<-unique(grid_china$ID)
+  IDs<-IDs[sample(length(IDs), length(IDs))]
+  for (ID in IDs){
     target_file<-sprintf("%s/%d.tif", target_folder, ID)
     if (file.exists(target_file)){
       next()
@@ -86,19 +107,41 @@ for (month in c(1:12)){
     status<-""
     while(T){
       status<-task_vector$status()$state
-      print(sprintf("Current status is %s", status))
+      print(sprintf("Current status is %s @ %s", status, user_str))
       if (status=="COMPLETED"){
         break()
       }
       if (status=="FAILED"){
         break()
       }
+      if (status=="CANCEL_REQUESTED"){
+        break()
+      }
+      if (status=="CANCELED"){
+        break()
+      }
+      
       print("system sleeping")
       Sys.sleep(60)
     }
     if (status=="COMPLETED"){
-      ee_drive_to_local(task = task_vector, dsn = target_file)
-      ee_clean_container(name = sprintf("sentinel2_%s_%d", folder, ID), type = "drive", quiet = FALSE)
+      succeed<-F
+      while(T){
+        tryCatch(expr = {
+          ee_drive_to_local(task = task_vector, dsn = target_file)
+          succeed<-T
+        },error = function(e) {
+          print("Error downloading, retry...")
+        }
+        
+        )
+        if (succeed){
+          print("Cleaning data from drive...")
+          ee_clean_container(name = sprintf("sentinel2_%s_%d", folder, ID), type = "drive", quiet = FALSE)
+          break()
+        }  
+      }
+      
     }
     if (F){
       library(raster)
