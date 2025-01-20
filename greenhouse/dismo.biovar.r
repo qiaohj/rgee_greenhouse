@@ -75,7 +75,7 @@ if (F){
   library(terra)
   library(stringr)
   library(data.table)
-  
+  options(warn=2)
   setwd("/media/huijieqiao/Butterfly/rgee_greenhouse/rgee_greenhouse")
   
   breading<-c(4:9)
@@ -85,7 +85,7 @@ if (F){
   conf<-list("breading"=breading,
              "wintering"=wintering,
              "full"=full)
-  i=2
+  i=3
   #for (i in c(1:length(conf))){
     tmax<-rast(sprintf("../Data/climate_mean/tasmax_%d.tif", conf[[i]]))
     tmin<-rast(sprintf("../Data/climate_mean/tasmin_%d.tif", conf[[i]]))
