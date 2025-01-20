@@ -69,6 +69,7 @@ df2_monthly<-daily_minmax[,.(mean_differ=mean(mean_differ),
 quhua_data<-df2_monthly[, .(N=.N), by=list(quhua, code, sensor_type)]
 
 target_quhua<-saveRDS(unique(quhua_data[N==12]$code), "../Data/target_quhua.rda")
+saveRDS(df2_monthly, "../Data/quhua.greenhouse.differ.rda")
 ggplot(df2_monthly[quhua %in% c(quhua_data[N==12]$quhua)])+
   #geom_ribbon(aes(ymin = diff_mean - diff_sd, ymax = diff_mean + diff_sd,
   #                x=month, group=factor(quhua)), 
