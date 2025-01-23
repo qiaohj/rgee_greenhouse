@@ -1,4 +1,5 @@
 library(terra)
+library(data.table)
 setwd("/media/huijieqiao/Butterfly/rgee_greenhouse/rgee_greenhouse")
 greenhouse_differ<-readRDS("../Data/quhua.greenhouse.differ.rda")
 quhua_data<-greenhouse_differ[, .(N=.N), by=list(quhua, code, sensor_type)]
@@ -8,7 +9,10 @@ greenhouse_differ<-greenhouse_differ[quhua %in% c(quhua_data[N==12]$quhua)]
 quhua_env_raw<-"../Data/climate_mean_quhua/%d/%s_%d.tif"
 quhua_env_greenhouse<-"../Data/climate_mean_quhua_greenhouse/%d/%s_%d.tif"
 greenhouse_tif<-"../Data/greenhouse_quhua/%d.tif"
-options(warn=2)
+options(warn=1)
+gh<-unique(greenhouse_differ$code)[1]
+m=1
+var<-"hurs"
 for (gh in unique(greenhouse_differ$code)){
   gh_r<-rast(sprintf(greenhouse_tif, gh))
   v_gh<-values(gh_r)
@@ -23,11 +27,13 @@ for (gh in unique(greenhouse_differ$code)){
       print(paste(gh, m, var))
       raw_raster<-rast(sprintf(quhua_env_raw, gh, var, m))
       differ_v<-differ[, var]
+      vvvvv<-values(raw_raster)
       if (var=="hurs"){
-        values(raw_raster)<-values(raw_raster)+differ_v
+        vvvvv[v_gh>0]<-vvvvv[v_gh>0]+differ_v
       }else{
-        values(raw_raster)<-values(raw_raster)+differ_v*10
+        vvvvv[v_gh>0]<-vvvvv[v_gh>0]+(differ_v*10)
       }
+      values(raw_raster)<-vvvvv
       writeRaster(raw_raster, sprintf(quhua_env_greenhouse, gh, var, m), overwrite=T)
     }
     
